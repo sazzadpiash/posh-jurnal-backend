@@ -26,10 +26,13 @@ export const register = async (req, res) => {
     const token = generateToken(user._id);
 
     // Set HttpOnly cookie
+    // For production (cross-origin), use 'none' with secure: true
+    // For development (same-origin), use 'lax' for better compatibility
+    const isProduction = process.env.NODE_ENV === 'production';
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
@@ -73,10 +76,13 @@ export const login = async (req, res) => {
     const token = generateToken(user._id);
 
     // Set HttpOnly cookie
+    // For production (cross-origin), use 'none' with secure: true
+    // For development (same-origin), use 'lax' for better compatibility
+    const isProduction = process.env.NODE_ENV === 'production';
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
@@ -95,8 +101,11 @@ export const login = async (req, res) => {
 };
 
 export const logout = (req, res) => {
+  const isProduction = process.env.NODE_ENV === 'production';
   res.cookie('token', '', {
     httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     expires: new Date(0)
   });
   res.json({ message: 'Logout successful' });
