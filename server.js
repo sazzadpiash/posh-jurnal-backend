@@ -18,13 +18,34 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-// CORS configuration - in production on Vercel, allow all origins since URL is dynamic
-app.use(
-	cors({
-		origin: process.env.CLIENT_URL || (process.env.NODE_ENV === "production" ? true : "http://localhost:5173"),
-		credentials: true,
-	})
-);
+// CORS configuration
+const corsOptions = {
+	credentials: true,
+	origin: function (origin, callback) {
+		// Allow requests with no origin (like mobile apps or curl requests)
+		if (!origin) return callback(null, true);
+
+		const allowedOrigins = process.env.CLIENT_URL
+			? process.env.CLIENT_URL.split(",").map((url) => url.trim())
+			: process.env.NODE_ENV === "production"
+			? [] // In production, require CLIENT_URL to be set
+			: ["http://localhost:5173", "http://localhost:3000"];
+
+		// If CLIENT_URL is not set in production, allow all (for Vercel dynamic URLs)
+		// This is less secure but necessary if frontend URL is dynamic
+		if (process.env.NODE_ENV === "production" && allowedOrigins.length === 0) {
+			return callback(null, true);
+		}
+
+		if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.length === 0) {
+			callback(null, true);
+		} else {
+			callback(new Error("Not allowed by CORS"));
+		}
+	},
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -83,18 +104,47 @@ const getMongoUri = () => {
 	}
 };
 
+// Validate required environment variables
+const validateEnv = () => {
+	const required = ["MONGO_URI", "JWT_SECRET"];
+	const missing = required.filter((key) => !process.env[key]);
+
+	if (missing.length > 0) {
+		console.error(`Missing required environment variables: ${missing.join(", ")}`);
+		if (process.env.NODE_ENV !== "production") {
+			process.exit(1);
+		}
+		throw new Error(`Missing required environment variables: ${missing.join(", ")}`);
+	}
+};
+
 // Connect to MongoDB
 const connectDB = async () => {
 	try {
-		await mongoose.connect(getMongoUri());
+		const mongoUri = getMongoUri();
+		await mongoose.connect(mongoUri);
 		console.log("Connected to MongoDB");
+
+		// Handle connection events
+		mongoose.connection.on("error", (err) => {
+			console.error("MongoDB connection error:", err);
+		});
+
+		mongoose.connection.on("disconnected", () => {
+			console.warn("MongoDB disconnected");
+		});
 	} catch (error) {
 		console.error("MongoDB connection error:", error);
+		// In production (Vercel), don't exit - let the serverless function handle it
+		// The connection will be retried on next request
 		if (process.env.NODE_ENV !== "production") {
 			process.exit(1);
 		}
 	}
 };
+
+// Validate environment variables before starting
+validateEnv();
 
 // Connect to database
 connectDB();
