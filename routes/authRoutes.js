@@ -18,8 +18,11 @@ const loginValidation = [
 ];
 
 // Routes
-router.post('/register', registerValidation, register);
+// Public routes - no authentication required
+router.post('/register', registerValidation, register); // Open registration - anyone can sign up
 router.post('/login', loginValidation, login);
+
+// Protected routes - require authentication
 router.post('/logout', logout);
 router.get('/me', protect, getMe);
 

@@ -2,6 +2,8 @@ import User from '../models/User.js';
 import { generateToken } from '../utils/jwt.js';
 import { validationResult } from 'express-validator';
 
+// Public registration endpoint - open to anyone
+// No restrictions, whitelist, or approval required
 export const register = async (req, res) => {
   try {
     // Check validation errors
@@ -12,13 +14,13 @@ export const register = async (req, res) => {
 
     const { name, email, password } = req.body;
 
-    // Check if user already exists
+    // Check if user already exists (prevent duplicate accounts)
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Create user
+    // Create new user - registration is open to everyone
     const user = new User({ name, email, password });
     await user.save();
 
