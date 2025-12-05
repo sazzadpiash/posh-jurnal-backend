@@ -40,6 +40,7 @@ export const register = async (req, res) => {
 
     res.status(201).json({
       message: 'User registered successfully',
+      token, // Also return token for localStorage fallback
       user: {
         id: user._id,
         name: user.name,
@@ -90,6 +91,7 @@ export const login = async (req, res) => {
 
     res.json({
       message: 'Login successful',
+      token, // Also return token for localStorage fallback
       user: {
         id: user._id,
         name: user.name,
